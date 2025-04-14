@@ -1,6 +1,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
+import { headers } from "next/headers";
 
 const menuItems = [
   {
@@ -11,6 +12,7 @@ const menuItems = [
         label: "Home",
         href: "/",
         visible: ["admin", "teacher", "student", "parent"],
+        exact: true, // Only highlight when exactly matches
       },
       {
         icon: "/teacher.png",
@@ -100,18 +102,21 @@ const menuItems = [
         label: "Profile",
         href: "/profile",
         visible: ["admin", "teacher", "student", "parent"],
+        exact: true, // Only highlight when exactly matches
       },
       {
         icon: "/setting.png",
         label: "Settings",
         href: "/settings",
         visible: ["admin", "teacher", "student", "parent"],
+        exact: true, // Only highlight when exactly matches
       },
       {
         icon: "/logout.png",
         label: "Logout",
         href: "/logout",
         visible: ["admin", "teacher", "student", "parent"],
+        exact: true, // Only highlight when exactly matches
       },
     ],
   },
@@ -120,6 +125,8 @@ const menuItems = [
 const Menu = async () => {
   const user = await currentUser();
   const role = user?.publicMetadata.role as string;
+  const headersList = headers();
+  const pathname = headersList.get("x-invoke-path") || "";
   return (
     <div className="mt-4 text-sm">
       {menuItems.map((i) => (
@@ -128,18 +135,31 @@ const Menu = async () => {
             {i.title}
           </span>
           {i.items.map((item) => {
-            if (item.visible.includes(role)) {
-              return (
-                <Link
-                  href={item.href}
-                  key={item.label}
-                  className="flex items-center justify-center lg:justify-start gap-4 text-gray-500 py-2 md:px-2 rounded-md hover:bg-lamaSkyLight"
-                >
-                  <Image src={item.icon} alt="" width={20} height={20} />
-                  <span className="hidden lg:block">{item.label}</span>
-                </Link>
-              );
-            }
+            if (!item.visible.includes(role)) return null;
+
+            const isExactMatch = pathname === item.href;
+            const isActive = item.exact
+              ? isExactMatch
+              : isExactMatch || pathname.startsWith(`${item.href}/`);
+
+            return (
+              <Link
+                href={item.href}
+                key={item.label}
+                className={`flex items-center justify-center lg:justify-start gap-4 py-2 md:px-2 rounded-md hover:bg-lamaSkyLight ${
+                  isActive ? "bg-lamaSkyLight text-lama" : "text-gray-500"
+                }`}
+              >
+                <Image
+                  src={item.icon}
+                  alt={item.label}
+                  width={20}
+                  height={20}
+                  className={isActive ? "opacity-100" : "opacity-60"}
+                />
+                <span className="hidden lg:block">{item.label}</span>
+              </Link>
+            );
           })}
         </div>
       ))}
